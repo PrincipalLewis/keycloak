@@ -1,5 +1,6 @@
 package org.keycloak.models.utils;
 
+import org.keycloak.hash.Sha256PasswordHashProvider;
 import org.keycloak.models.Constants;
 import org.keycloak.common.util.Base64;
 import org.jboss.logging.Logger;
@@ -1118,6 +1119,35 @@ public class RepresentationToModel {
             }
             user.updateCredentialDirectly(hashedCred);
         }
+    }
+
+    public static void updateCredentialDirectly(UserModel user, CredentialRepresentation cred) {
+
+        UserCredentialValueModel hashedCred = new UserCredentialValueModel();
+
+        if (cred.getValue() != null) {
+            hashedCred = Sha256PasswordHashProvider.encode(cred.getValue(), cred.getHashIterations(), cred.getSalt());
+        } else {
+            hashedCred.setType(cred.getType());
+            hashedCred.setDevice(cred.getDevice());
+            if (cred.getHashIterations() != null) hashedCred.setHashIterations(cred.getHashIterations());
+            if (cred.getSalt() != null) hashedCred.setSalt(cred.getSalt().getBytes());
+            hashedCred.setValue(cred.getHashedSaltedValue());
+            if (cred.getCounter() != null) hashedCred.setCounter(cred.getCounter());
+            if (cred.getDigits() != null) hashedCred.setDigits(cred.getDigits());
+            if (cred.getAlgorithm() != null) hashedCred.setAlgorithm(cred.getAlgorithm());
+            if (cred.getPeriod() != null) hashedCred.setPeriod(cred.getPeriod());
+            if (cred.getDigits() == null && UserCredentialModel.isOtp(cred.getType())) {
+                hashedCred.setDigits(6);
+            }
+            if (cred.getAlgorithm() == null && UserCredentialModel.isOtp(cred.getType())) {
+                hashedCred.setAlgorithm(HmacOTP.HMAC_SHA1);
+            }
+            if (cred.getPeriod() == null && UserCredentialModel.TOTP.equals(cred.getType())) {
+                hashedCred.setPeriod(30);
+            }
+        }
+        user.updateCredentialDirectly(hashedCred);
     }
 
     public static UserCredentialModel convertCredential(CredentialRepresentation cred) {

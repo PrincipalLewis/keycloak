@@ -709,6 +709,29 @@ public class UsersResource {
     }
 
     /**
+     * Set up a temporary password for the user
+     *
+     * sha256 algorithm only
+     * @param id User id
+     * @param pass A Temporary password
+     */
+    @Path("{id}/reset-password-directly")
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void resetPasswordDirectly(@PathParam("id") String id, CredentialRepresentation pass) {
+        auth.requireManage();
+
+        UserModel user = session.users().getUserById(id, realm);
+        if (user == null) {
+            throw new NotFoundException("User not found");
+        }
+        if (pass == null || pass.getSalt() == null || (pass.getHashedSaltedValue() == null && pass.getValue() == null) || !CredentialRepresentation.PASSWORD.equals(pass.getType())) {
+            throw new BadRequestException("No password provided");
+        }
+        RepresentationToModel.updateCredentialDirectly(user, pass);
+    }
+
+    /**
      * Remove TOTP from the user
      *
      * @param id User id
