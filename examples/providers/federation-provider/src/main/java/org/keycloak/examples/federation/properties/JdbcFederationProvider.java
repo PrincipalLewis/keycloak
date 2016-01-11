@@ -42,10 +42,9 @@ public class JdbcFederationProvider implements UserFederationProvider {
 
     @Override
     public UserModel getUserByUsername(RealmModel realm, String username) {
-        Map<String,String> hm =  driver.getPassword(username);
+        DBUserCredential pass =  driver.getPassword(username);
 
-
-        if (hm != null) {
+        if (pass != null) {
             UserModel userModel = session.userStorage().addUser(realm, username);
             userModel.setEnabled(true);
             userModel.setFederationLink(model.getId());
@@ -129,11 +128,12 @@ public class JdbcFederationProvider implements UserFederationProvider {
     }
 
     private boolean savePassword(RealmModel realm, UserModel user, UserCredentialModel cred) {
-        Map<String,String> hm =  driver.getPassword(user.getUsername());
+        System.out.println("--------------------------------------------------------------------------------------------");
+        DBUserCredential pass =  driver.getPassword(user.getUsername());
 
-        String dbPassword = hm.get("dbPassword");
-        String salt = hm.get("salt");
-
+        String dbPassword = pass.getDbPassword();
+        String salt = pass.getSalt();
+        System.out.println("--------------------------------------------------------------------------------------------");
         if ( dbPassword == null) return false;
 
         String HashedPassword = Sha256PasswordHashProvider.encodePassword(cred.getValue(), salt);
