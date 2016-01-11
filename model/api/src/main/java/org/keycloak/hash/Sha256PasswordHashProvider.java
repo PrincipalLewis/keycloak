@@ -58,12 +58,12 @@ public class Sha256PasswordHashProvider implements PasswordHashProviderFactory, 
         return ID;
     }
 
-    private static String encodePassword(String rawPassword, String salt) {
+    public static String encodePassword(String rawPassword, String salt) {
         String md5PlusSalt = alg(rawPassword, "MD5") + salt;
         return alg(md5PlusSalt, "sha-256");
     }
 
-    private static String alg(String data, String algorithm) {
+    public static String alg(String data, String algorithm) {
         try {
             MessageDigest md = MessageDigest.getInstance(algorithm);
             byte [] messageDigest = md.digest(data.getBytes());
