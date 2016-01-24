@@ -7,18 +7,9 @@ import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariConfig;
 
 public class Driver {
-    protected String host;
-    protected String login;
-    protected String password;
+    private HikariDataSource ds;
 
     public Driver(String host, String login, String password) {
-        this.host = host;
-        this.login = login;
-        this.password = password;
-    }
-
-    public DBUserCredential getPassword(String username) {
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         System.out.println("Подключеник к DB");
 
         HikariConfig config = new HikariConfig();
@@ -27,62 +18,32 @@ public class Driver {
         config.setPassword(password);
         config.setDriverClassName("org.postgresql.Driver");
 
-        HikariDataSource ds = new HikariDataSource(config);
+        ds = new HikariDataSource(config);
         System.out.println("Драйвер подключен");
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    }
+
+    public DBUserCredential getPassword(String username) {
 
         try (Connection connection = ds.getConnection()) {
-            System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
             // use the connection
             Statement statement = connection.createStatement();
-            ResultSet result1 = statement.executeQuery("SELECT user FROM users where name=" + username);
-            while (result1.next()) {
-                String userid = result1.getString("id");
-                String usernam = result1.getString("username");
-
-                System.out.println("userid : " + userid);
-                System.out.println("username : " + usernam);
+//            ResultSet result = statement.executeQuery("SELECT id,hash,login FROM relive.main.member where login='" + username + "'");
+            ResultSet result = statement.executeQuery("SELECT username,id FROM user_entity where username='" + username + "'");
+            String hashPassword = null;
+            String salt = null;
+            while (result.next()) {
+//                salt = result.getString("id");
+//                hashedPassword = result.getString("hash");
+                salt = "1";
+                hashPassword = "80ebda59183efebc1bea12e289a4b3e0c41ef431dea10ca179e00c6f41dddd18";
             }
 
-            System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-
-            return new DBUserCredential(result1.getString("hashPassword"), result1.getString("salt"));
+            return new DBUserCredential(hashPassword, salt);
 
         } catch (Exception ex) {
             System.out.println("\nЯ Запрос шатал\n");
             throw new RuntimeException(ex);
         }
 
-
-
-//        Connection connection = null;
-//        try {
-//            System.out.println("Подключеник к DB");
-//            Class.forName("org.postgresql.Driver");
-//
-//
-//            System.out.println("Драйвер подключен");
-//            connection = DriverManager.getConnection(this.host, this.login, this.password);
-//            System.out.println("Соединение установлено");
-//
-//            System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-//            Statement statement = connection.createStatement();
-//            ResultSet result1 = statement.executeQuery("SELECT user FROM users where name=" + username);
-//
-//
-//
-//        } catch (Exception ex) {
-//            System.out.println("\nЯ Запрос шатал\n");
-//            throw new RuntimeException(ex);
-//        } finally {
-//            if (connection != null) {
-//                try {
-//                    connection.close();
-//                } catch (SQLException ex) {
-//                    System.out.println("Хрен я тебе закроюсь!!!!");
-//                    System.err.println(ex);
-//                }
-//            }
-//        }
     }
 }

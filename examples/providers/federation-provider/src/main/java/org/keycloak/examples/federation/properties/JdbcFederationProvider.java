@@ -1,6 +1,5 @@
 package org.keycloak.examples.federation.properties;
 
-import org.keycloak.hash.Sha256PasswordHashProvider;
 import org.keycloak.models.*;
 
 import java.util.*;
@@ -22,36 +21,57 @@ public class JdbcFederationProvider implements UserFederationProvider {
         supportedCredentialTypes.add(UserCredentialModel.PASSWORD);
     }
 
-    public KeycloakSession getSession() {
-        return session;
-    }
-    public UserFederationProviderModel getModel() {
-        return model;
-    }
-
+    @Override
     public UserModel validateAndProxy(RealmModel realm, UserModel local) {
         return null;
     }
 
+    @Override
     public boolean synchronizeRegistrations() {
-        return false;
+        return true;
     }
 
-    public UserModel register(RealmModel realm, UserModel user){return null;}
+    @Override
+    public UserModel register(RealmModel realm, UserModel user){
+        user.setFederationLink(null);
+
+        String username = user.getUsername();
+        System.out.println("username : " + username);
+        DBUserCredential pass =  driver.getPassword(username);
+
+        String dbPassword = pass.getDbPassword();
+        String salt = pass.getSalt();
+
+        System.out.println("salt : " + salt);
+        System.out.println("dbPassword : " + dbPassword);
+
+        if (dbPassword != null && salt != null) {
+
+            UserCredentialValueModel credentials = new UserCredentialValueModel();
+            credentials.setAlgorithm("sha256");
+            credentials.setType(UserCredentialModel.PASSWORD);
+            credentials.setSalt(salt.getBytes());
+            credentials.setHashIterations(1);
+            credentials.setValue(dbPassword);
+
+            user.updateCredentialDirectly(credentials);
+
+            System.out.println("salt : " + salt);
+            System.out.println("dbPassword : " + dbPassword);
+        }
+
+        return user;
+    }
+
+    @Override
     public boolean removeUser(RealmModel realm, UserModel user){return false;}
 
     @Override
     public UserModel getUserByUsername(RealmModel realm, String username) {
-        DBUserCredential pass =  driver.getPassword(username);
 
-        if (pass != null) {
-            UserModel userModel = session.userStorage().addUser(realm, username);
-            userModel.setEnabled(true);
-            userModel.setFederationLink(model.getId());
-            return userModel;
-        }
+
+
         return null;
-
     }
 
     @Override
@@ -105,45 +125,12 @@ public class JdbcFederationProvider implements UserFederationProvider {
 
     @Override
     public boolean validCredentials(RealmModel realm, UserModel user, List<UserCredentialModel> input) {
-        for (UserCredentialModel cred : input) {
-            if (cred.getType().equals(UserCredentialModel.PASSWORD)) {
-                return savePassword(realm, user, cred);
-            } else {
-                return false; // invalid cred type
-            }
-        }
         return false;
     }
 
     @Override
     public boolean validCredentials(RealmModel realm, UserModel user, UserCredentialModel... input) {
-        for (UserCredentialModel cred : input) {
-            if (cred.getType().equals(UserCredentialModel.PASSWORD)) {
-                return savePassword(realm, user, cred);
-            } else {
-                return false; // invalid cred type
-            }
-        }
         return true;
-    }
-
-    private boolean savePassword(RealmModel realm, UserModel user, UserCredentialModel cred) {
-        System.out.println("--------------------------------------------------------------------------------------------");
-        DBUserCredential pass =  driver.getPassword(user.getUsername());
-
-        String dbPassword = pass.getDbPassword();
-        String salt = pass.getSalt();
-        System.out.println("--------------------------------------------------------------------------------------------");
-        if ( dbPassword == null) return false;
-
-        String HashedPassword = Sha256PasswordHashProvider.encodePassword(cred.getValue(), salt);
-        boolean check = dbPassword.equals(HashedPassword);
-        if (check) {
-            session.userStorage().getUserById(user.getId(), realm).setFederationLink(null);
-            UserCredentialValueModel hashCred = Sha256PasswordHashProvider.encode(cred.getValue(), 1, salt);
-            session.userStorage().getUserById(user.getId(), realm).updateCredentialDirectly(hashCred);
-        }
-        return check;
     }
 
     @Override
